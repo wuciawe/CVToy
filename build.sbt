@@ -18,6 +18,8 @@ val opencvVersion = "2.4.11"
 libraryDependencies ++= Seq(
   "org.bytedeco"                 % "javacpp"         % javacppVersion,
   "org.bytedeco"                 % "javacv"          % javacppVersion,
+  "org.bytedeco.javacpp-presets" % "flandmark" % ("1.07-" + javacppVersion) classifier "",
+  "org.bytedeco.javacpp-presets" % "flandmark" % ("1.07-" + javacppVersion) classifier platform,
   "org.bytedeco.javacpp-presets" % "opencv" % (opencvVersion + "-" + javacppVersion) classifier "",
   "org.bytedeco.javacpp-presets" % "opencv" % (opencvVersion + "-" + javacppVersion) classifier platform,
   "org.scala-lang.modules"      %% "scala-swing"     % "1.0.1"
