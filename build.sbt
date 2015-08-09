@@ -22,7 +22,8 @@ libraryDependencies ++= Seq(
   "org.bytedeco.javacpp-presets" % "flandmark" % ("1.07-" + javacppVersion) classifier platform,
   "org.bytedeco.javacpp-presets" % "opencv" % (opencvVersion + "-" + javacppVersion) classifier "",
   "org.bytedeco.javacpp-presets" % "opencv" % (opencvVersion + "-" + javacppVersion) classifier platform,
-  "org.scala-lang.modules"      %% "scala-swing"     % "1.0.1"
+  "org.scala-lang.modules"      %% "scala-swing"     % "1.0.1",
+  "org.scalafx" %% "scalafx" % "8.0.31-R7"
 )
 
 autoCompilerPlugins := true

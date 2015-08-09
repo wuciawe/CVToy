@@ -2,14 +2,12 @@ package com.cvtoy
 
 import java.io.File
 import javax.swing.JFrame._
-import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.helper.opencv_core._
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacpp.opencv_imgproc._
 import org.bytedeco.javacpp.opencv_objdetect._
 import org.bytedeco.javacpp.flandmark._
 import org.bytedeco.javacv.{OpenCVFrameConverter, FrameGrabber, CanvasFrame}
-
 import scala.util.Try
 
 /**
