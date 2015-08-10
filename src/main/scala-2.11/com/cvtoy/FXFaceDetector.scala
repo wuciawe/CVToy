@@ -1,7 +1,6 @@
 package com.cvtoy
 
 import java.io.File
-
 import org.bytedeco.javacpp.flandmark._
 import org.bytedeco.javacpp.helper.opencv_core._
 import org.bytedeco.javacpp.opencv_core._
@@ -13,7 +12,10 @@ import scalafx.animation.AnimationTimer
 import scalafx.application.JFXApp
 import scalafx.application.JFXApp.PrimaryStage
 import scalafx.embed.swing.SwingFXUtils
-import scalafx.scene.Scene
+import scalafx.geometry.Insets
+import scalafx.scene.control.Button
+import scalafx.scene.layout.{VBox, HBox}
+import scalafx.scene.{Group, Scene}
 import scalafx.scene.canvas.Canvas
 import scalafx.Includes._
 
@@ -21,6 +23,7 @@ import scalafx.Includes._
  * Created by haha on 2015/8/9.
  */
 object FXFaceDetector extends JFXApp {
+  var last = 0.0
 
   def detectFaceInImage(input: IplImage, cascade: CvHaarClassifierCascade, model: FLANDMARK_Model, bbox: Array[Int], landmarks: Array[Double]): Option[IData] = {
     val storage = cvCreateMemStorage(0)
@@ -53,6 +56,48 @@ object FXFaceDetector extends JFXApp {
     t.toOption
   }
 
+  def drawFaceInImage(img: IplImage): Unit = {
+    val resizedImg = cvCreateImage(cvSize((grabber.getImageWidth * Config.ratio).toInt, (grabber.getImageHeight * Config.ratio).toInt), img.depth(), img.nChannels())
+    cvResize(img, resizedImg)
+    val imageBW = cvCreateImage(cvGetSize(resizedImg), IPL_DEPTH_8U, 1)
+    cvCvtColor(resizedImg, imageBW, CV_BGR2GRAY)
+
+    val bbox: Array[Int] = new Array[Int](4)
+    val landmarks: Array[Double] = new Array[Double](2 * model.data.options.M)
+    detectFaceInImage(imageBW, faceCascade, model, bbox, landmarks) match {
+      case Some(data) =>
+        data.data.foreach {
+          case IFaceData(face, facebound, nose, points) =>
+            cvRectangle(img, face.leftCorner, face.rightCorner, CV_RGB(255, 0, 0))
+            cvRectangle(img, facebound.leftCorner, facebound.rightCorner, CV_RGB(0, 0, 255))
+            cvCircle(img, nose.point, 3, CV_RGB(0, 0, 255), CV_FILLED, 8, 0)
+            points.points.foreach { point =>
+              cvCircle(img, point, 3, CV_RGB(255, 0, 0), CV_FILLED, 8, 0)
+            }
+        }
+      case None =>
+    }
+    cvReleaseImage(imageBW)
+    cvReleaseImage(resizedImg)
+  }
+
+  def timerJob(state: => WorkState)(now: Long): Unit = {
+    println(s"${now / 1000000000.0 - last} s")
+    last = now / 1000000000.0
+    Try{
+      val img = converter.convert(grabber.grab())
+      state match {
+        case DetectFace =>
+          drawFaceInImage(img)
+        case DirectShow =>
+      }
+      gc.drawImage(SwingFXUtils.toFXImage(imgConverter.convert(converter.convert(img)), null), 0, 0)
+    }.recover{
+      case _ =>
+        println("failed")
+    }
+  }
+
   lazy val faceCascadeFile = new File("haarcascade_frontalface_alt.xml")
   lazy val flandmarkModelFile = new File("flandmark_model.dat")
 
@@ -69,55 +114,56 @@ object FXFaceDetector extends JFXApp {
   lazy val grabber = FrameGrabber.createDefault(0)
   grabber.start()
   println("grabber started")
+//  Thread.sleep(1000)
+//  detectFaceInImage(converter.convert(grabber.grab()), faceCascade, model, new Array[Int](4), new Array[Double](2 * model.data.options.M))
+//  println("init detector")
 
-  var last = 0.0
 
-  val timer = AnimationTimer {
-    (now: Long) => {
-      println(s"${now / 1000000000.0 - last} s")
-      last = now / 1000000000.0
-      Try{
-        val img = converter.convert(grabber.grab())
-        val resizedImg = cvCreateImage(cvSize((grabber.getImageWidth * Config.ratio).toInt, (grabber.getImageHeight * Config.ratio).toInt), img.depth(), img.nChannels())
-        cvResize(img, resizedImg)
-        val imageBW = cvCreateImage(cvGetSize(resizedImg), IPL_DEPTH_8U, 1)
-        cvCvtColor(resizedImg, imageBW, CV_BGR2GRAY)
-
-        val bbox: Array[Int] = new Array[Int](4)
-        val landmarks: Array[Double] = new Array[Double](2 * model.data.options.M)
-        detectFaceInImage(imageBW, faceCascade, model, bbox, landmarks) match {
-          case Some(data) =>
-            data.data.foreach {
-              case IFaceData(face, facebound, nose, points) =>
-                cvRectangle(img, face.leftCorner, face.rightCorner, CV_RGB(255, 0, 0))
-                cvRectangle(img, facebound.leftCorner, facebound.rightCorner, CV_RGB(0, 0, 255))
-                cvCircle(img, nose.point, 3, CV_RGB(0, 0, 255), CV_FILLED, 8, 0)
-                points.points.foreach { point =>
-                  cvCircle(img, point, 3, CV_RGB(255, 0, 0), CV_FILLED, 8, 0)
-                }
-            }
-          case None =>
-        }
-
-        gc.drawImage(SwingFXUtils.toFXImage(imgConverter.convert(converter.convert(img)), null), 0, 0)
-        cvReleaseImage(imageBW)
-        cvReleaseImage(resizedImg)
-      }.recover{
-        case _ =>
-          println("failed")
-      }
-    }
-  }
+  val timer = AnimationTimer(timerJob(Config.state))
 
   timer.start()
 
   lazy val canvas = new Canvas(grabber.getImageWidth, grabber.getImageHeight)
   lazy val gc = canvas.graphicsContext2D
 
+  lazy val detectButton = new Button {
+    text = Config.state.text
+    onAction = handle {
+      Config.state = Config.state match {
+        case DirectShow => DetectFace
+        case DetectFace => DirectShow
+      }
+      text = Config.state.text
+    }
+  }
+
+  lazy val emptyButton = new Button {
+    margin = Insets(0, 0, 0, 5)
+    text = "empty"
+    onAction = handle {}
+  }
+
   stage = new PrimaryStage {
     title = "Canvas Test"
-    scene = new Scene(grabber.getImageWidth, grabber.getImageHeight) {
-      content = canvas
+    scene = new Scene(grabber.getImageWidth + 40, grabber.getImageHeight + 100) {
+      content = new Group {
+        children = List(
+          new VBox {
+            layoutX = 20
+            layoutY = 20
+            spacing = 10
+            children = List(
+              new HBox {
+                children = List(
+                  detectButton,
+                  emptyButton
+                )
+              },
+              canvas
+            )
+          }
+        )
+      }
     }
   }
 
@@ -142,4 +188,15 @@ object IPoint {
 
 object Config {
   val ratio = 0.5
+  var state: WorkState = DirectShow
+}
+
+sealed trait WorkState {
+  def text: String
+}
+case object DirectShow extends WorkState {
+  override val text = "Start Detect"
+}
+case object DetectFace extends WorkState {
+  override val text = "Stop Detect"
 }
