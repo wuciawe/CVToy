@@ -11,9 +11,9 @@ lazy val platform = org.bytedeco.javacpp.Loader.getPlatform
 // Some dependencies like `javacpp` are packaged with maven-plugin packaging
 classpathTypes += "maven-plugin"
 
-val javacppVersion = "0.11"
+val javacppVersion = "1.0"
 
-val opencvVersion = "2.4.11"
+val opencvVersion = "3.0.0"
 
 libraryDependencies ++= Seq(
   "org.bytedeco"                 % "javacpp"         % javacppVersion,
@@ -22,8 +22,7 @@ libraryDependencies ++= Seq(
   "org.bytedeco.javacpp-presets" % "flandmark" % ("1.07-" + javacppVersion) classifier platform,
   "org.bytedeco.javacpp-presets" % "opencv" % (opencvVersion + "-" + javacppVersion) classifier "",
   "org.bytedeco.javacpp-presets" % "opencv" % (opencvVersion + "-" + javacppVersion) classifier platform,
-  "org.scala-lang.modules"      %% "scala-swing"     % "1.0.1",
-  "org.scalafx" %% "scalafx" % "8.0.31-R7"
+  "org.scalafx" %% "scalafx" % "8.0.40-R8"
 )
 
 autoCompilerPlugins := true
@@ -31,7 +30,7 @@ autoCompilerPlugins := true
 // fork a new JVM for 'run' and 'test:run'
 fork := true
 // add a JVM option to use when forking a JVM for 'run'
-javaOptions += "-Xmx1G"
+javaOptions += "-Xmx2G"
 
 // Set the prompt (for this build) to include the project id.
 shellPrompt in ThisBuild := { state => "sbt:" + Project.extract(state).currentRef.project + "> "}
